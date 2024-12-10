@@ -1,0 +1,17 @@
+# Example of commands for processing recorder reads
+
+#input_r1 = "ODS01_CKDL240030627-1A_22G7LWLT4_L3_1.fq.gz"
+#input_r2 = "ODS01_CKDL240030627-1A_22G7LWLT4_L3_2.fq.gz"
+#extract_paired_rec_reads(input_r1, input_r2)
+
+#input_r1 = "ODS02_CKDL240030628-1A_22G7LWLT4_L3_1.fq.gz"
+#input_r2 = "ODS02_CKDL240030628-1A_22G7LWLT4_L3_2.fq.gz"
+#extract_paired_rec_reads(input_r1, input_r2)
+
+input_r1 = "ODS03_CKDL240030629-1A_22GG2NLT4_L5_1.fq"
+input_r2 = "ODS03_CKDL240030629-1A_22GG2NLT4_L5_2.fq.gz"
+extract_paired_rec_reads(input_r1, input_r2)
+
+#input_r1 = "ODS04_CKDL240030630-1A_22GG2NLT4_L5_1.fq.gz"
+#input_r2 = "ODS04_CKDL240030630-1A_22GG2NLT4_L5_2.fq.gz"
+#extract_paired_rec_reads(input_r1, input_r2)
