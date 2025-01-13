@@ -135,3 +135,72 @@ def extract_paired_rec_reads(raw_path, reads_out_path, input_r1, input_r2):
     output_merged_csv = os.path.join(reads_out_path, f'{id}_rec_data_combined.csv')
     merged_df.to_csv(output_merged_csv, index=False)
 
+# Function will map the barcode sequences to wells to provide the cell ID
+def map_barcodes_to_wells(bc1, bc2, bc3, bc1_dict, bc2_bc3_dict):
+
+    bc1_well = bc1_dict.get(bc1, None)
+    bc2_well = bc2_bc3_dict.get(bc2, None)
+    bc3_well = bc2_bc3_dict.get(bc3, None)
+
+    # Return the formatted barcode string in {BC1_well}_{BC2_well}_{BC3_well} format
+    if bc1_well and bc2_well and bc3_well:
+        return f"{bc1_well}_{bc2_well}_{bc3_well}"
+    else:
+        return None
+
+# Processes reads with barcodes
+def process_reads_with_barcodes(read_data, bc1_data_path, bc2_bc3_data_path):
+
+    # Load the barcode data
+    bc1_data = pd.read_csv(bc1_data_path)  # For BC1
+    bc2_bc3_data = pd.read_csv(bc2_bc3_data_path)  # For BC2 and BC3
+
+    # Create dictionaries for fast lookup
+    bc1_dict = bc1_data.set_index('sequence')['well'].to_dict()
+    bc2_bc3_dict = bc2_bc3_data.set_index('sequence')['well'].to_dict()
+
+    # Ensure read_data is a DataFrame
+    if not isinstance(read_data, pd.DataFrame):
+        raise ValueError("read_data should be a pandas DataFrame.")
+
+    # Apply the mapping function to each row using DataFrame.apply for vectorized operation
+    read_data['well_barcode'] = read_data.apply(
+        lambda row: map_barcodes_to_wells(
+            row['BC1'], row['BC2'], row['BC3'], bc1_dict, bc2_bc3_dict
+        ),
+        axis=1
+    )
+    return read_data
+
+# Collapses reads by UMI
+def collapse_umi(read_data):
+    # Use only required columns for grouping and aggregation
+    grouping_columns = ['well_barcode', 'UMI']
+
+    # Keep the first occurrence of all columns except 'read_id'
+    agg_dict = {col: 'first' for col in read_data.columns if col not in ['read_id', 'UMI', 'well_barcode']}
+    agg_dict['UMI'] = 'size'  # Count the occurrences of UMI
+
+    # Perform groupby and aggregation
+    collapsed_data = read_data.groupby(grouping_columns, as_index=False).agg(agg_dict)
+
+    # Rename the 'UMI' column to 'read_count'
+    collapsed_data.rename(columns={'UMI': 'read_count'}, inplace=True)
+
+    return collapsed_data
+
+# Cleans data to remove NA's and edit counts not between 0 and 7
+def remove_rows_with_missing_values(df):
+    cleaned_df = df.replace("", pd.NA).dropna()
+    cleaned_df = cleaned_df[cleaned_df['edits_count'] >= 0]
+    cleaned_df = cleaned_df[cleaned_df['edits_count'] < 8]
+    return cleaned_df
+
+# Map miRNA name to a motif
+def find_miRNA(motif, motifs_df):
+    # Check if any motif in the motifs dataframe appears as a substring within the given motif
+    matching_miRNAs = motifs_df[motifs_df['Motif'].apply(lambda x: x in motif)]['miRNA'].unique()
+    if len(matching_miRNAs) > 0:
+        return matching_miRNAs
+    else:
+        return ["no match"]
