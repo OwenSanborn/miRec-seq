@@ -1,16 +1,16 @@
 import os
-import matplotlib.pyplot as plt
 import re
 import pandas as pd
 import pyfastx
+import os
 import csv
-from collections import Counter
+import pandas as pd
 
 # Function will extract the 3 barcodes and UMI from the reverse read. A vector is returned containing the read ID and each barcode.
 def process_rec_BC(seq, read_id):
-    BC1_pattern = re.compile(r'ATCCACGTGCTTGAGACTGTGG(.{8})')
-    BC2_pattern = re.compile(r'(.{8})ATCCACGTGCTTGAGACTGTGG')
-    BC3_pattern = re.compile(r'(.{8})GTGGCCGATGTTTCGCATCGGCGTACGACT')
+    BC1_pattern = re.compile(r'AGACTGTGG(.{8})')
+    BC2_pattern = re.compile(r'(.{8})ATCCACGT')
+    BC3_pattern = re.compile(r'(.{8})GTGGCCGA')
     UMI = seq[1:10]
 
     match_BC1 = BC1_pattern.search(seq)
@@ -30,9 +30,10 @@ def process_rec_BC(seq, read_id):
         'UMI': UMI
     }
 
-# Function will extract recorder motif and hairpin from the forward read. The hairpin is verified as being 34 positions long and the number of edits is returned
+# Handles each read to extract recorder or hairpin components
 def process_recorder(seq, read_id):
     motif_pattern = re.compile(r'CTATTCTGGCTG(.*?)TCCAACGCAAT')
+    #hp_pattern = re.compile(r'TTAAATT(.*?)AGGCCTG')
     hp_pattern = re.compile(r'TTAAATT(.{34})')
 
     match_motif = motif_pattern.search(seq)
@@ -53,19 +54,18 @@ def process_recorder(seq, read_id):
     }
 
 
-# Function for iterating over a fastq file and extracting the motif, hairpin, and barcodes by calling process_recorder and process_recorder_BC.
-def extract_paired_rec_reads(input_r1, input_r2):
+def extract_paired_rec_reads(raw_path, reads_out_path, input_r1, input_r2):
     id = input_r1[:5]  
     rec = "CCAATCCAATCC"
     bc_adapter = "CGTGCTTGAG"
 
     # Define paths for the input FASTQ files (forward and reverse)
-    input_path_r1 = os.path.join("/Users/osanborn/Documents/0.Obsidian Vault/Projects/01 - miRec/Data/sc-miRec-seq_03Oct24/raw_data", input_r1)
-    input_path_r2 = os.path.join("/Users/osanborn/Documents/0.Obsidian Vault/Projects/01 - miRec/Data/sc-miRec-seq_03Oct24/raw_data", input_r2)
+    input_path_r1 = os.path.join(raw_path, input_r1)
+    input_path_r2 = os.path.join(raw_path, input_r2)
     
     # Output file paths for CSV and FASTQ (output both R1 and R2 reads)
-    output_csv_1 = os.path.join("/Users/osanborn/Documents/0.Obsidian Vault/Projects/01 - miRec/Data/sc-miRec-seq_03Oct24/Rec_Analysis/rec_reads", f'{id}_rec_data_1.csv')
-    output_csv_2 = os.path.join("/Users/osanborn/Documents/0.Obsidian Vault/Projects/01 - miRec/Data/sc-miRec-seq_03Oct24/Rec_Analysis/rec_reads", f'{id}_rec_data_2.csv')
+    output_csv_1 = os.path.join(reads_out_path, f'{id}_rec_data_1.csv')
+    output_csv_2 = os.path.join(reads_out_path, f'{id}_rec_data_2.csv')
 
 
     # Define CSV headers
@@ -132,5 +132,6 @@ def extract_paired_rec_reads(input_r1, input_r2):
     merged_df = pd.merge(df1, df2, on='read_id', how='inner')
 
     # Save the merged DataFrame to a new CSV file
-    output_merged_csv = os.path.join("/Users/osanborn/Documents/0.Obsidian Vault/Projects/01 - miRec/Data/sc-miRec-seq_03Oct24/Rec_Analysis/rec_reads", f'{id}_rec_data_combined.csv')
+    output_merged_csv = os.path.join(reads_out_path, f'{id}_rec_data_combined.csv')
     merged_df.to_csv(output_merged_csv, index=False)
+
